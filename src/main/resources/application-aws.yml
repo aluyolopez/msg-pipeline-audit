@@ -1,0 +1,24 @@
+# =============================================================================
+# application-aws.yml — Perfil AWS Lambda (msg-pipeline-audit-sesion-05)
+# =============================================================================
+#
+# VARIABLES DE ENTORNO REQUERIDAS EN LAMBDA:
+#   DYNAMODB_TABLE_NAME = msg-pipeline-messages
+#   SNS_TOPIC_ARN       = arn:aws:sns:us-east-1:{ACCOUNT}:msg-pipeline-email-notifications-sesion-05
+#   AWS_REGION          = us-east-1 (Lambda la inyecta automáticamente)
+#
+# TIMEOUT RECOMENDADO: 60 segundos
+# (15s delay de procesamiento + tiempo DynamoDB + tiempo SNS)
+# =============================================================================
+
+spring:
+  main:
+    # NONE: el Audit Lambda no necesita servidor web (no tiene endpoints HTTP)
+    # Solo consume eventos de EventBridge — no hay requests HTTP directos
+    web-application-type: none
+    allow-bean-definition-overriding: false
+
+logging:
+  level:
+    com.msgpipeline: INFO
+    software.amazon.awssdk: WARN

@@ -1,0 +1,112 @@
+// =============================================================================
+// build.gradle — msg-pipeline-audit-sesion-05
+// =============================================================================
+//
+// ARQUITECTURA: Hexagonal (Ports & Adapters) + Clean Architecture
+//
+// NUEVO PROYECTO EN SESIÓN 05:
+//   Lambda que recibe eventos de EventBridge y los procesa:
+//     1. Espera 15 segundos (delay simulado de procesamiento)
+//     2. Actualiza DynamoDB: status PENDING → COMPLETED
+//     3. Publica notificación en SNS (email)
+//
+// FLUJO:
+//   EventBridge (msg-pipeline-events-sesion-05)
+//     → Rule (source=msg-pipeline.processor)
+//     → Lambda (msg-pipeline-audit-sesion-05)
+//     → AuditHandler::handleRequest
+//     → DynamoDB UpdateItem (COMPLETED) + SNS Publish
+//
+// TAREAS CLAVE:
+//   ./gradlew bootRun --args='--spring.profiles.active=local'  → dev local
+//   ./gradlew clean buildZip                                    → deploy Lambda
+//
+// =============================================================================
+
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.5.0'
+    id 'io.spring.dependency-management' version '1.1.5'
+}
+
+group   = 'com.msgpipeline'
+version = '1.0.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+configurations {
+    compileOnly { extendsFrom annotationProcessor }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+
+    // ─── Spring Boot Core ────────────────────────────────────────────────────
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // ─── SpringDoc OpenAPI ───────────────────────────────────────────────────
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
+
+    // ─── AWS Lambda ──────────────────────────────────────────────────────────
+    implementation 'com.amazonaws:aws-lambda-java-core:1.2.3'
+    // aws-lambda-java-events incluye los modelos de EventBridge events
+    implementation 'com.amazonaws:aws-lambda-java-events:3.11.4'
+
+    // ─── AWS SDK v2 ──────────────────────────────────────────────────────────
+    implementation platform('software.amazon.awssdk:bom:2.25.40')
+
+    // DynamoDB: actualizar status PENDING → COMPLETED con UpdateItem
+    implementation 'software.amazon.awssdk:dynamodb'
+
+    // SNS: publicar notificación de procesamiento completado
+    // El Audit Lambda es el que publica en SNS (igual que la Sesión 04, pero ahora
+    // lo hace el Audit, no el Processor)
+    implementation 'software.amazon.awssdk:sns'
+
+    // ─── Utilidades ──────────────────────────────────────────────────────────
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+
+    compileOnly    'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // ─── Tests ───────────────────────────────────────────────────────────────
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+bootJar { enabled = false }
+jar     { enabled = true  }
+
+// ─── buildZip — Formato ZIP oficial para AWS Lambda Java ─────────────────────
+//
+// Handler a configurar en Lambda:
+//   com.msgpipeline.audit.AuditHandler::handleRequest
+//
+tasks.register('buildZip', Zip) {
+    group       = 'build'
+    description = 'Genera el ZIP de despliegue para AWS Lambda (clases en raíz + deps en lib/)'
+
+    archiveFileName      = 'msg-pipeline-audit-sesion-05-lambda.zip'
+    destinationDirectory = layout.buildDirectory.dir('distributions')
+
+    dependsOn compileJava, processResources
+
+    from sourceSets.main.output
+
+    into('lib') {
+        from configurations.runtimeClasspath
+    }
+}
+
+build.dependsOn buildZip
+
+test {
+    useJUnitPlatform()
+}

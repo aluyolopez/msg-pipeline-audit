@@ -1,0 +1,12 @@
+# =============================================================================
+# application-local.yml — Perfil local (msg-pipeline-audit-sesion-05)
+# =============================================================================
+spring:
+  main:
+    web-application-type: none
+
+logging:
+  level:
+    com.msgpipeline: DEBUG
+    org.springframework: INFO
+    software.amazon.awssdk: OFF
