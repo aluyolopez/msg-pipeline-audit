@@ -1,0 +1,7 @@
+# ENV: DYNAMODB_TABLE_NAME, SNS_TOPIC_ARN
+# CRITICO -- TIMEOUT: configurar > 20s en Lambda Console (delay 15s + overhead)
+# Recomendado: 60 segundos
+# IAM: DynamoDB + SNS Full Access
+logging:
+  level:
+    com.msgpipeline: INFO
